@@ -1,0 +1,23 @@
+#!/bin/bash
+
+endpointFile="/tmp/endpoint.ip"
+
+if [ -f $endpointFile ] ; then 
+       rm $endpointFile
+fi
+
+cd /etc/wireguard/
+
+echo "[+] Getting endpoint ip list"
+grep -Ri "Endpoint" | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" > $endpointFile
+
+echo "[+] Starting Test"
+while read i; do
+      	serverName=$(grep -lRioE "$i")	
+	pingTest=$(ping -c 4 "$i" | tail -1 | awk '{print $4}' | cut -d '/' -f 2)    
+	echo " Server $serverName Using endpoint $i Reponse Speed is :" $pingTest " ms"  	
+	
+done < $endpointFile
+
+rm $endpointFile
+
