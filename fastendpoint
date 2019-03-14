@@ -1,23 +1,48 @@
 #!/bin/bash
 
-endpointFile="/tmp/endpoint.ip"
+endpointFile="/tmp/endpoint"
+speedResult="/tmp/speedresult"
+sortResult="/tmp/sortresult"
+
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
 
 if [ -f $endpointFile ] ; then 
        rm $endpointFile
 fi
 
+if [ -f $speedResult ] ; then
+	rm $speedResult
+fi
+
+if [ -f $sortResult ] ; then 
+	rm $sortResult
+fi
+
+
+
 cd /etc/wireguard/
 
-echo "[+] Getting endpoint ip list"
-grep -Ri "Endpoint" | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" > $endpointFile
+echo "[+] Creating Endpoint List"
+grep -Ri "Endpoint" | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | uniq > $endpointFile
 
 echo "[+] Starting Test"
 while read i; do
       	serverName=$(grep -lRioE "$i")	
 	pingTest=$(ping -c 4 "$i" | tail -1 | awk '{print $4}' | cut -d '/' -f 2)    
-	echo " Server $serverName Using endpoint $i Reponse Speed is :" $pingTest " ms"  	
-	
+	echo "$serverName $pingTest" >> $speedResult
 done < $endpointFile
 
+
+echo "[+] Sorting Server"
+sort -h -k2 $speedResult >> $sortResult 
+fastestServer=$(grep -m1 "" $sortResult)
+echo "[+] Fastest server is $fastestServer"
+
+
 rm $endpointFile
+rm $speedResult
+rm $sortResult
 
